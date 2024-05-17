@@ -41,7 +41,7 @@ type TTSStreamURL struct {
 }
 
 // TTSGrpcStream creates a new TTS stream ovr gRCP and streams the audio bytes immediately.
-func (c *Client) TTSGrpcStream(ctx context.Context, w io.Writer, req *pb.TtsRequest) error {
+func (c *Client) TTSGrpcStream(ctx context.Context, w io.Writer, req chan *pb.TtsRequest) error {
 	ttsc := pb.NewTtsClient(c.opts.GRPC)
 	tts, err := ttsc.Tts(ctx, req)
 	if err != nil {

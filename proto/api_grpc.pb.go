@@ -26,7 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TtsClient interface {
-	Tts(ctx context.Context, in *TtsRequest, opts ...grpc.CallOption) (Tts_TtsClient, error)
+	Tts(ctx context.Context, in chan *TtsRequest, opts ...grpc.CallOption) (Tts_TtsClient, error)
 }
 
 type ttsClient struct {
@@ -37,18 +37,24 @@ func NewTtsClient(cc grpc.ClientConnInterface) TtsClient {
 	return &ttsClient{cc}
 }
 
-func (c *ttsClient) Tts(ctx context.Context, in *TtsRequest, opts ...grpc.CallOption) (Tts_TtsClient, error) {
+func (c *ttsClient) Tts(ctx context.Context, in chan *TtsRequest, opts ...grpc.CallOption) (Tts_TtsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Tts_ServiceDesc.Streams[0], Tts_Tts_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
 	x := &ttsTtsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+
+	go func() {
+		for elem := range in {
+			if err := x.ClientStream.SendMsg(elem); err != nil {
+				//do nothing right now...
+				break
+			}
+		}
+		if err := x.ClientStream.CloseSend(); err != nil {
+			//do nothing right now
+		}
+	}()
 	return x, nil
 }
 
