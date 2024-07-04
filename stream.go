@@ -61,6 +61,27 @@ func (c *Client) TTSGrpcStream(ctx context.Context, w io.Writer, req *pb.TtsRequ
 	}
 }
 
+func (c *Client) TTSGrpcStreamChannel(ctx context.Context, w chan []byte, req *pb.TtsRequest) error {
+	ttsc := pb.NewTtsClient(c.opts.GRPC)
+	tts, err := ttsc.Tts(ctx, req)
+	if err != nil {
+		return err
+	}
+	for {
+		resp, err := tts.Recv()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		//belt and braces
+		copyData := make([]byte, len(resp.Data))
+		copy(copyData, resp.Data)
+		w <- copyData
+	}
+}
+
 // TTSStream creates a new TTS stream and streams the audio bytes immediately.
 func (c *Client) TTSStream(ctx context.Context, w io.Writer, createReq *CreateTTSStreamReq) error {
 	u, err := url.Parse(c.opts.BaseURL + "/" + c.opts.Version + "/tts/stream")
